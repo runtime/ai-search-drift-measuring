@@ -1,0 +1,11 @@
+.idea/
+.idea
+
+.DS_STORE
+
+.env
+.env.production
+.env.stage
+.env.dev
+
+
