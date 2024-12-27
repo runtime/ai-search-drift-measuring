@@ -1,16 +1,23 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import APIRouter, HTTPException
 import psycopg2
 import numpy as np
 from sentence_transformers import SentenceTransformer, util
 from pydantic import BaseModel
 
-app = FastAPI()
+router = APIRouter()
+
+print("API module loaded!")
+
+# Test endpoint
+@router.get("/test")
+def test_endpoint():
+    return {"message": "Test endpoint works!"}
 
 # Connect to PostgreSQL
 conn = psycopg2.connect(
-    dbname="your_db_name",
-    user="your_user",
-    password="your_password",
+    dbname="aisearch",
+    user="home",
+    password="12345",
     host="localhost",
     port="5432"
 )
@@ -28,18 +35,12 @@ class EmbeddingResponse(BaseModel):
     similarity: float
 
 # Store embeddings
-@app.post("/store")
+@router.post("/store")
 def store_embedding(sentence: str):
-    embedding = model.encode(sentence).tolist()
-    cursor.execute(
-        "INSERT INTO embeddings (sentence, embedding) VALUES (%s, %s) RETURNING id",
-        (sentence, embedding)
-    )
-    conn.commit()
-    return {"id": cursor.fetchone()[0], "message": "Embedding stored successfully!"}
+    return {"message": f"Received sentence: {sentence}"}
 
 # Query embeddings
-@app.post("/query", response_model=list[EmbeddingResponse])
+@router.post("/query", response_model=list[EmbeddingResponse])
 def query_embedding(query: Query):
     cursor.execute("SELECT id, sentence, embedding FROM embeddings")
     rows = cursor.fetchall()
