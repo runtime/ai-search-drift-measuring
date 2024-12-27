@@ -1,0 +1,5 @@
+fastapi,
+psycopg2,
+numpy,
+sentence_transformers,
+pyndantic
