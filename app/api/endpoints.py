@@ -3,6 +3,8 @@ import psycopg2
 import numpy as np
 from sentence_transformers import SentenceTransformer, util
 from pydantic import BaseModel
+import pickle
+import json
 
 router = APIRouter()
 
@@ -35,22 +37,95 @@ class EmbeddingResponse(BaseModel):
     similarity: float
 
 # Store embeddings
+import pickle  # For serializing embeddings into bytea
+
 @router.post("/store")
 def store_embedding(sentence: str):
-    return {"message": f"Received sentence: {sentence}"}
+    try:
+        # sentence = sentence
+        if not sentence:
+            raise HTTPException(status_code=400, detail="Sentence is required")
+
+        #return {"message": f"Embedding stored successfully for sentence: {sentence}"}
+        # Generate embedding using the SentenceTransformer model
+        embedding = model.encode(sentence)
+        serialized_embedding = pickle.dumps(embedding)  # Serialize the embedding
+
+        # Store the sentence and embedding in the database
+        cursor.execute(
+            "INSERT INTO embeddings (text, embedding) VALUES (%s, %s) RETURNING id",
+            (sentence, serialized_embedding)
+        )
+        conn.commit()
+
+        # Get the ID of the inserted record
+        record_id = cursor.fetchone()[0]
+
+        return {"id": record_id, "message": f"Embedding stored successfully for sentence: {sentence}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error storing embedding: {str(e)}")
+
+
 
 # Query embeddings
 @router.post("/query", response_model=list[EmbeddingResponse])
 def query_embedding(query: Query):
-    cursor.execute("SELECT id, sentence, embedding FROM embeddings")
-    rows = cursor.fetchall()
-    results = []
+    try:
+        # Fetch all stored embeddings from the database
+        cursor.execute("SELECT text, embedding FROM embeddings")
+        rows = cursor.fetchall()
 
-    query_embedding = model.encode(query.text)
-    for _, sentence, embedding in rows:
-        similarity = util.cos_sim(query_embedding, np.array(embedding))[0][0]
-        results.append({"sentence": sentence, "similarity": similarity.item()})
+        # Encode the query text
+        query_embedding = model.encode(query.text)
 
-    # Sort by similarity
-    results = sorted(results, key=lambda x: x["similarity"], reverse=True)
-    return results[:5]
+        results = []
+        for text, serialized_embedding in rows:
+            # Deserialize the embedding from the database
+            embedding = pickle.loads(serialized_embedding)
+
+            # Calculate the similarity between the query and the current embedding
+            similarity = util.cos_sim(query_embedding, embedding)[0][0]
+            results.append({
+                "sentence": text,
+                "similarity": similarity.item()
+            })
+
+        # Sort results by similarity in descending order
+        results = sorted(results, key=lambda x: x["similarity"], reverse=True)
+
+        # Return the top 5 most similar sentences
+        return results[:5]
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error querying embeddings: {str(e)}")
+
+
+# @router.post("/query", response_model=list[EmbeddingResponse])
+# def query_embedding(query: Query):
+#     try:
+#         # Encode the query text
+#         query_embedding = model.encode(query.text)
+#
+#         # Retrieve all embeddings from the database
+#         cursor.execute("SELECT text, embedding FROM embeddings")
+#         rows = cursor.fetchall()
+#
+#         results = []
+#         for text, serialized_embedding in rows:
+#             # Deserialize the embedding
+#             stored_embedding = pickle.loads(serialized_embedding)
+#
+#             # Calculate cosine similarity
+#             similarity = util.cos_sim(query_embedding, stored_embedding)[0][0].item()
+#
+#             # Append the result
+#             results.append({"sentence": text, "similarity": similarity})
+#
+#         # Sort results by similarity in descending order
+#         results = sorted(results, key=lambda x: x["similarity"], reverse=True)
+#
+#         # Return the top 5 most similar results
+#         return results[:5]
+#
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Error querying embeddings: {str(e)}")
