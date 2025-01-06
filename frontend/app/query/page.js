@@ -22,7 +22,7 @@ export default function QueryPage() {
                 <div className="mt-6">
                     {state.value==="success" && results.data.length > 0 ? (
                         results.data.map((result, index) => (
-                            <div key={index} className="p-4 bg-white shadow rounded mb-4">
+                            <div key={index} className="p-4 bg-white shadow rounded mb-4 text-gray-800">
                                 <p className="font-bold">{result.answer}</p>
                                 <p>Similarity: {result.similarity.toFixed(2)}</p>
                                 {result.flagged && (
