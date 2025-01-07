@@ -22,18 +22,18 @@ export default function Search() {
     };
 
     return (
-        <div className="flex flex-col items-center">
+        <div className="dark flex flex-col items-center">
             <input
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Enter your query..."
-                className="border p-2 rounded w-full max-w-md text-gray-800"
+                className="dark border-grey-900 p-2 rounded w-full max-w-md bg-gray-600 text-gray-400"
             />
             <div className="mt-4 flex gap-4">
                 <button
                     onClick={handleSearch}
-                    className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                    className="bg-gray-200 text-black px-4 py-2 rounded hover:bg-gray-300"
                 >
                     Search
                 </button>
